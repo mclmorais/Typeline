@@ -1,5 +1,5 @@
-import type { TypedKey } from '../../typeline'
-import { defineStep } from '../../typeline'
+import type { TypedKey } from '../../../typeline'
+import { defineStep } from '../../../typeline'
 import type { User, Preferences } from '../keys'
 import { delay } from '../utils'
 

@@ -1,4 +1,4 @@
-import { createKey } from '../typeline'
+import { createKey } from '../../typeline'
 
 export type User = {
     id: string

@@ -1,5 +1,5 @@
-import type { TypedKey } from '../../typeline'
-import { defineStep } from '../../typeline'
+import type { TypedKey } from '../../../typeline'
+import { defineStep } from '../../../typeline'
 import type { Report } from '../keys'
 
 export const PrintReportStep = defineStep(

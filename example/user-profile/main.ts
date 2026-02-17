@@ -1,4 +1,4 @@
-import { createPipeline, parallel } from '../typeline'
+import { createPipeline, parallel } from '../../typeline'
 import { keys } from './keys'
 import { FetchUserStep } from './steps/fetch-user'
 import { FetchOrdersStep } from './steps/fetch-orders'
