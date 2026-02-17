@@ -7,10 +7,11 @@ declare const brand: unique symbol
 export type TypedKey<T> = {
     readonly [brand]: T
     readonly sym: symbol
+    readonly name: string
 }
 
 export function createKey<T>(name: string): TypedKey<T> {
-    return { sym: Symbol(name) } as TypedKey<T>
+    return { sym: Symbol(name), name } as TypedKey<T>
 }
 
 export class TypedMap {
@@ -36,6 +37,7 @@ export function createPipeline() {
 
     type Step = {
         name: string,
+        requires?: TypedKey<unknown>[],
         run: (store: TypedMap) => void
     }
 
@@ -45,6 +47,16 @@ export function createPipeline() {
         asyncLocalStorage.run(new TypedMap(), () => {
             const store = asyncLocalStorage.getStore()!
             for (const step of steps) {
+                // Validate required keys before running the step
+                for (const key of step.requires ?? []) {
+                    if (!store.has(key)) {
+                        throw new Error(
+                            `Step "${step.name}" requires key "${key.name}" but it has not been set. ` +
+                            `Ensure a preceding step sets this value before this step runs.`
+                        )
+                    }
+                }
+
                 console.log(`Running step: ${step.name}`)
                 step.run(store)
             }
@@ -73,10 +85,21 @@ const SetValueStep = {
 
 const GetValueStep = {
     name: "Get Value Step",
+    requires: [valueKey],
     run: (store: TypedMap) => {
         const value = store.get(valueKey)
         console.log("Value: ", value)
     }
 }
 
+// Correct order — passes validation
+console.log("=== Correct order ===")
 runPipeline([SetValueStep, GetValueStep])
+
+// Wrong order — throws because "value" key hasn't been set yet
+console.log("\n=== Wrong order ===")
+try {
+    runPipeline([GetValueStep, SetValueStep])
+} catch (e) {
+    console.error((e as Error).message)
+}
