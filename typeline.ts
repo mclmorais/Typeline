@@ -93,3 +93,12 @@ export function createPipeline() {
         getStore
     }
 }
+
+// --- Step Factory ---
+
+export function defineStep<K extends Record<string, TypedKey<unknown>>>(
+    factory: (keys: K) => Step
+): (keys: K) => Step {
+    return (keys: K) => factory(keys)
+}
+
