@@ -1,3 +1,5 @@
 import { createKey } from './typeline'
 
-export const valueKey = createKey<string>("value")
+export const keys = {
+    value: createKey<string>("value"),
+}

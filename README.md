@@ -68,14 +68,16 @@ The `set` method uses `NoInfer<T>` on the value parameter so that the key alone 
 
 ### Key registry
 
-All typed keys are defined in a central `keys.ts` file that acts as the schema of the pipeline's shared state:
+All typed keys are defined in a central `keys.ts` object that acts as the schema of the pipeline's shared state:
 
 ```typescript
 // keys.ts
 import { createKey } from './typeline'
 
-export const valueKey = createKey<string>("value")
-export const countKey = createKey<number>("count")
+export const keys = {
+    value: createKey<string>("value"),
+    count: createKey<number>("count"),
+}
 ```
 
-Steps import the keys they need from this single location, which avoids circular dependencies and makes the full store shape visible in one place.
+Steps import the `keys` object and reference keys via `keys.value`, `keys.count`, etc. — giving you autocomplete on `keys.` and avoiding circular dependencies.
