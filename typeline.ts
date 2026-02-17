@@ -38,19 +38,26 @@ export type Step = {
     run: (store: TypedMap) => void | Promise<void>
 }
 
-export type ParallelGroup = {
+export type StepFactory<K extends Record<string, TypedKey<unknown>>> = (keys: K) => Step
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ParallelGroupFactory = {
     readonly __parallel: true,
-    readonly steps: Step[]
+    readonly factories: StepFactory<any>[]
 }
 
-export type PipelineEntry = Step | ParallelGroup
+export type PipelineEntryFactory<K extends Record<string, TypedKey<unknown>>> = StepFactory<K> | ParallelGroupFactory
 
-export function parallel(steps: Step[]): ParallelGroup {
-    return { __parallel: true, steps }
+export function parallel(
+    factories: StepFactory<any>[]
+): ParallelGroupFactory {
+    return { __parallel: true, factories }
 }
 
-function isParallelGroup(entry: PipelineEntry): entry is ParallelGroup {
-    return '__parallel' in entry
+function isParallelGroup<K extends Record<string, TypedKey<unknown>>>(
+    entry: PipelineEntryFactory<K>
+): entry is ParallelGroupFactory {
+    return typeof entry === 'object' && '__parallel' in entry
 }
 
 function validateStep(step: Step, store: TypedMap): void {
@@ -64,25 +71,27 @@ function validateStep(step: Step, store: TypedMap): void {
     }
 }
 
-export function createPipeline() {
+export function createPipeline<K extends Record<string, TypedKey<unknown>>>(keys: K) {
     const asyncLocalStorage = new AsyncLocalStorage<TypedMap>()
 
     const getStore = () => asyncLocalStorage.getStore()
 
-    const runPipeline = (entries: PipelineEntry[]) => {
+    const runPipeline = (entries: PipelineEntryFactory<K>[]) => {
         return asyncLocalStorage.run(new TypedMap(), async () => {
             const store = asyncLocalStorage.getStore()!
             for (const entry of entries) {
                 if (isParallelGroup(entry)) {
-                    for (const step of entry.steps) {
+                    const steps = entry.factories.map(f => f(keys))
+                    for (const step of steps) {
                         validateStep(step, store)
                     }
-                    console.log(`Running in parallel: [${entry.steps.map(s => s.name).join(', ')}]`)
-                    await Promise.all(entry.steps.map(step => step.run(store)))
+                    console.log(`Running in parallel: [${steps.map(s => s.name).join(', ')}]`)
+                    await Promise.all(steps.map(step => step.run(store)))
                 } else {
-                    validateStep(entry, store)
-                    console.log(`Running step: ${entry.name}`)
-                    await entry.run(store)
+                    const step = entry(keys)
+                    validateStep(step, store)
+                    console.log(`Running step: ${step.name}`)
+                    await step.run(store)
                 }
             }
         })
@@ -98,7 +107,7 @@ export function createPipeline() {
 
 export function defineStep<K extends Record<string, TypedKey<unknown>>>(
     factory: (keys: K) => Step
-): (keys: K) => Step {
+): StepFactory<K> {
     return (keys: K) => factory(keys)
 }
 

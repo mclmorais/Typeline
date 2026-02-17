@@ -6,7 +6,7 @@ import { FetchPreferencesStep } from './steps/fetch-preferences'
 import { GenerateReportStep } from './steps/generate-report'
 import { PrintReportStep } from './steps/print-report'
 
-const { runPipeline } = createPipeline()
+const { runPipeline } = createPipeline(keys)
 
 /*
  * Pipeline: User Profile Enrichment
@@ -26,13 +26,10 @@ console.log("🚀 Starting User Profile Enrichment Pipeline\n")
 const start = performance.now()
 
 await runPipeline([
-    FetchUserStep(keys),
-    parallel([
-        FetchOrdersStep(keys),
-        FetchPreferencesStep(keys),
-    ]),
-    GenerateReportStep(keys),
-    PrintReportStep(keys),
+    FetchUserStep,
+    parallel([FetchOrdersStep, FetchPreferencesStep]),
+    GenerateReportStep,
+    PrintReportStep,
 ])
 
 const elapsed = performance.now() - start
