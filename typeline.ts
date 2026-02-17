@@ -35,7 +35,33 @@ export class TypedMap {
 export type Step = {
     name: string,
     requires?: TypedKey<unknown>[],
-    run: (store: TypedMap) => void
+    run: (store: TypedMap) => void | Promise<void>
+}
+
+export type ParallelGroup = {
+    readonly __parallel: true,
+    readonly steps: Step[]
+}
+
+export type PipelineEntry = Step | ParallelGroup
+
+export function parallel(steps: Step[]): ParallelGroup {
+    return { __parallel: true, steps }
+}
+
+function isParallelGroup(entry: PipelineEntry): entry is ParallelGroup {
+    return '__parallel' in entry
+}
+
+function validateStep(step: Step, store: TypedMap): void {
+    for (const key of step.requires ?? []) {
+        if (!store.has(key)) {
+            throw new Error(
+                `Step "${step.name}" requires key "${key.name}" but it has not been set. ` +
+                `Ensure a preceding step sets this value before this step runs.`
+            )
+        }
+    }
 }
 
 export function createPipeline() {
@@ -43,22 +69,21 @@ export function createPipeline() {
 
     const getStore = () => asyncLocalStorage.getStore()
 
-    const runPipeline = (steps: Step[]) => {
-        asyncLocalStorage.run(new TypedMap(), () => {
+    const runPipeline = (entries: PipelineEntry[]) => {
+        return asyncLocalStorage.run(new TypedMap(), async () => {
             const store = asyncLocalStorage.getStore()!
-            for (const step of steps) {
-                // Validate required keys before running the step
-                for (const key of step.requires ?? []) {
-                    if (!store.has(key)) {
-                        throw new Error(
-                            `Step "${step.name}" requires key "${key.name}" but it has not been set. ` +
-                            `Ensure a preceding step sets this value before this step runs.`
-                        )
+            for (const entry of entries) {
+                if (isParallelGroup(entry)) {
+                    for (const step of entry.steps) {
+                        validateStep(step, store)
                     }
+                    console.log(`Running in parallel: [${entry.steps.map(s => s.name).join(', ')}]`)
+                    await Promise.all(entry.steps.map(step => step.run(store)))
+                } else {
+                    validateStep(entry, store)
+                    console.log(`Running step: ${entry.name}`)
+                    await entry.run(store)
                 }
-
-                console.log(`Running step: ${step.name}`)
-                step.run(store)
             }
         })
     }
