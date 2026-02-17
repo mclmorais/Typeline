@@ -1,51 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-
-// --- Typed Key / Store ---
-
-declare const brand: unique symbol
-
-export type TypedKey<T> = {
-    readonly [brand]: T
-    readonly sym: symbol
-    readonly name: string
-}
-
-export function createKey<T>(name: string): TypedKey<T> {
-    return { sym: Symbol(name), name } as TypedKey<T>
-}
-
-export class TypedMap {
-    private map = new Map<symbol, unknown>()
-
-    get<T>(key: TypedKey<T>): T | undefined {
-        return this.map.get(key.sym) as T | undefined
-    }
-
-    require<T>(key: TypedKey<T>): T {
-        if (!this.map.has(key.sym)) {
-            throw new Error(`Required key "${key.name}" is not set.`)
-        }
-        return this.map.get(key.sym) as T
-    }
-
-    set<T>(key: TypedKey<T>, value: NoInfer<T>): void {
-        this.map.set(key.sym, value)
-    }
-
-    has(key: TypedKey<unknown>): boolean {
-        return this.map.has(key.sym)
-    }
-}
-
-// --- Pipeline ---
-
-export type Step = {
-    name: string,
-    requires?: TypedKey<unknown>[],
-    run: (store: TypedMap) => void | Promise<void>
-}
-
-export type StepFactory<K extends Record<string, TypedKey<unknown>>> = (keys: K) => Step
+import type { TypedKey } from './key'
+import { TypedMap } from './store'
+import type { Step, StepFactory } from './step'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ParallelGroupFactory = {
@@ -109,12 +65,3 @@ export function createPipeline<K extends Record<string, TypedKey<unknown>>>(keys
         getStore
     }
 }
-
-// --- Step Factory ---
-
-export function defineStep<K extends Record<string, TypedKey<unknown>>>(
-    factory: (keys: K) => Step
-): StepFactory<K> {
-    return (keys: K) => factory(keys)
-}
-
