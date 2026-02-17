@@ -1,35 +1,80 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
-const asyncLocalStorage = new AsyncLocalStorage<string>()
+// --- Typed Key / Store ---
 
+declare const brand: unique symbol
 
-type Step = {
-    name: string,
-    run: () => void
+export type TypedKey<T> = {
+    readonly [brand]: T
+    readonly sym: symbol
 }
 
-const steps: Step[] = []
+export function createKey<T>(name: string): TypedKey<T> {
+    return { sym: Symbol(name) } as TypedKey<T>
+}
 
-function runPipeline(steps: Step[]) {
-    for (const step of steps) {
-        console.log(`Running step: ${step.name}`)
-        step.run()
+export class TypedMap {
+    private map = new Map<symbol, unknown>()
+
+    get<T>(key: TypedKey<T>): T | undefined {
+        return this.map.get(key.sym) as T | undefined
+    }
+
+    set<T>(key: TypedKey<T>, value: NoInfer<T>): void {
+        this.map.set(key.sym, value)
+    }
+
+    has(key: TypedKey<unknown>): boolean {
+        return this.map.has(key.sym)
     }
 }
 
-const SetValueStep: Step = {
-    name: "Set Value Step",
-    run: () => {
-        asyncLocalStorage.run("value", () => {
-            console.log("Value set")
+// --- Pipeline ---
+
+export function createPipeline() {
+    const asyncLocalStorage = new AsyncLocalStorage<TypedMap>()
+
+    type Step = {
+        name: string,
+        run: (store: TypedMap) => void
+    }
+
+    const getStore = () => asyncLocalStorage.getStore()
+
+    const runPipeline = (steps: Step[]) => {
+        asyncLocalStorage.run(new TypedMap(), () => {
+            const store = asyncLocalStorage.getStore()!
+            for (const step of steps) {
+                console.log(`Running step: ${step.name}`)
+                step.run(store)
+            }
         })
     }
+
+    return {
+        runPipeline,
+        getStore
+    }
 }
 
-const GetValueStep: Step = {
+// --- Example Usage ---
+
+const valueKey = createKey<string>("value")
+
+const { runPipeline } = createPipeline()
+
+const SetValueStep = {
+    name: "Set Value Step",
+    run: (store: TypedMap) => {
+        store.set(valueKey, "some value")
+        console.log("Value set")
+    }
+}
+
+const GetValueStep = {
     name: "Get Value Step",
-    run: () => {
-        const value = asyncLocalStorage.getStore()
+    run: (store: TypedMap) => {
+        const value = store.get(valueKey)
         console.log("Value: ", value)
     }
 }
