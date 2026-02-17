@@ -4,6 +4,7 @@ import type { TypedMap } from './store'
 export type Step = {
     name: string,
     requires?: TypedKey<unknown>[],
+    provides?: TypedKey<unknown>[],
     run: (store: TypedMap) => void | Promise<void>
 }
 
