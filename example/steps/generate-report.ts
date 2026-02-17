@@ -13,9 +13,9 @@ export const GenerateReportStep = defineStep(
         name: "Generate Report",
         requires: [keys.user, keys.orders, keys.preferences],
         run: async (store) => {
-            const user = store.get(keys.user)!
-            const orders = store.get(keys.orders)!
-            const preferences = store.get(keys.preferences)!
+            const user = store.require(keys.user)
+            const orders = store.require(keys.orders)
+            const preferences = store.require(keys.preferences)
 
             await delay(200)
 

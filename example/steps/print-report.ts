@@ -7,7 +7,7 @@ export const PrintReportStep = defineStep(
         name: "Print Report",
         requires: [keys.report],
         run: (store) => {
-            const report = store.get(keys.report)!
+            const report = store.require(keys.report)
             console.log("\n📋 User Profile Report")
             console.log("──────────────────────")
             console.log(`  Name:       ${report.userName}`)

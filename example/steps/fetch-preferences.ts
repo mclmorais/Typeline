@@ -8,7 +8,7 @@ export const FetchPreferencesStep = defineStep(
         name: "Fetch Preferences",
         requires: [keys.user],
         run: async (store) => {
-            const user = store.get(keys.user)!
+            const user = store.require(keys.user)
             await delay(400)
             store.set(keys.preferences, {
                 theme: 'dark',

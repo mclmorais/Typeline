@@ -8,7 +8,7 @@ export const FetchOrdersStep = defineStep(
         name: "Fetch Orders",
         requires: [keys.user],
         run: async (store) => {
-            const user = store.get(keys.user)!
+            const user = store.require(keys.user)
             await delay(500)
             store.set(keys.orders, [
                 { id: "ord_1", product: "Mechanical Keyboard", amount: 149.99 },
