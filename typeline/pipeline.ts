@@ -55,6 +55,17 @@ function validateStep(step: Step, store: TypedMap): void {
     }
 }
 
+import { PipelineError } from './error'
+
+function wrapError(stepName: string, cause: unknown, store: TypedMap): PipelineError {
+    if (cause instanceof PipelineError) return cause
+    return new PipelineError({
+        stepName,
+        cause,
+        storeSnapshot: store.snapshot(),
+    })
+}
+
 async function runEntries<K extends Record<string, TypedKey<unknown>>>(
     entries: PipelineEntryFactory<K>[],
     keys: K,
@@ -67,7 +78,12 @@ async function runEntries<K extends Record<string, TypedKey<unknown>>>(
                 validateStep(step, store)
             }
             console.log(`Running in parallel: [${steps.map(s => s.name).join(', ')}]`)
-            await Promise.all(steps.map(step => step.run(store)))
+            try {
+                await Promise.all(steps.map(step => step.run(store)))
+            } catch (error) {
+                const failedName = steps.map(s => s.name).join(' | ')
+                throw wrapError(failedName, error, store)
+            }
         } else if (isForkGroup(entry)) {
             const taken = entry.condition(store)
             const branch = taken ? entry.trueBranch : entry.falseBranch
@@ -77,7 +93,11 @@ async function runEntries<K extends Record<string, TypedKey<unknown>>>(
             const step = entry(keys)
             validateStep(step, store)
             console.log(`Running step: ${step.name}`)
-            await step.run(store)
+            try {
+                await step.run(store)
+            } catch (error) {
+                throw wrapError(step.name, error, store)
+            }
         }
     }
 }

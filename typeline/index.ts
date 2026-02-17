@@ -10,3 +10,5 @@ export { createPipeline, parallel, fork } from './pipeline'
 export type { ParallelGroupFactory, ForkGroupFactory, PipelineEntryFactory } from './pipeline'
 
 export { optimize } from './optimize'
+
+export { PipelineError } from './error'
